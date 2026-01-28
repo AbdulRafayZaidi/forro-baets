@@ -38,6 +38,41 @@
     </div>
 
     <script>
+        // Add these variables at the top
+let stepCounter = 0;
+const steps = ["QUICK (Left)", "QUICK (Right)", "SLOW (Left / Hold)", 
+               "QUICK (Right)", "QUICK (Left)", "SLOW (Right / Hold)"];
+
+function playBeat(beatNumber, time) {
+    const osc = audioCtx.createOscillator();
+    const envelope = audioCtx.createGain();
+
+    osc.frequency.value = (beatNumber === 1) ? 880 : 440;
+    envelope.gain.exponentialRampToValueAtTime(1, time);
+    envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+
+    osc.connect(envelope);
+    envelope.connect(audioCtx.destination);
+
+    osc.start(time);
+    osc.stop(time + 0.1);
+
+    // VISUAL LOGIC FOR QUICK-QUICK-SLOW
+    const delay = (time - audioCtx.currentTime) * 1000;
+    setTimeout(() => {
+        // We update the text to show the dance step
+        visualizer.innerText = steps[stepCounter];
+        
+        // Visual styling
+        if (steps[stepCounter].includes("QUICK")) {
+            visualizer.style.background = "#ff4757"; // Red for fast
+        } else {
+            visualizer.style.background = "#2ed573"; // Green for slow/hold
+        }
+
+        stepCounter = (stepCounter + 1) % steps.length;
+    }, delay);
+}
         let audioCtx = null;
         let isRunning = false;
         let currentBeat = 1;
