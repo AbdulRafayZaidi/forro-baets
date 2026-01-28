@@ -27,6 +27,30 @@
     </div>
 
     <script>
+        // This is a simplified logic flow for your app
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const analyser = audioCtx.createAnalyser();
+const filter = audioCtx.createBiquadFilter();
+
+// Filter out everything except the bass (below 150Hz)
+filter.type = "lowpass";
+filter.frequency.value = 150; 
+
+function detectBeat() {
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(dataArray);
+
+    // Calculate the "energy" of the bass
+    let lowerHalfArray = dataArray.slice(0, dataArray.length / 4);
+    let sum = lowerHalfArray.reduce((a, b) => a + b, 0);
+    let avg = sum / lowerHalfArray.length;
+
+    // If the bass energy jumps above a certain level, it's a beat!
+    if (avg > threshold) {
+        triggerVisualFlash(); 
+    }
+    requestAnimationFrame(detectBeat);
+}
         let isPlaying = false;
         let interval;
         const visualizer = document.getElementById('visualizer');
