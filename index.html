@@ -104,50 +104,41 @@ function playBeat(beatNumber, time) {
             while (nextNoteTime < audioCtx.currentTime + 0.1) {
                 playBeat(currentBeat, nextNoteTime);
                 nextNoteTime += 60.0 / bpmRange.value;
-                currentBeat = (currentBeat === 1) ? 2 : 1; // Forró is 2/4 time
-            }
-            timerID = requestAnimationFrame(scheduler);
+      // Add these variables at the top
+let stepCounter = 0;
+const steps = ["QUICK (Left)", "QUICK (Right)", "SLOW (Left / Hold)", 
+               "QUICK (Right)", "QUICK (Left)", "SLOW (Right / Hold)"];
+
+function playBeat(beatNumber, time) {
+    const osc = audioCtx.createOscillator();
+    const envelope = audioCtx.createGain();
+
+    osc.frequency.value = (beatNumber === 1) ? 880 : 440;
+    envelope.gain.exponentialRampToValueAtTime(1, time);
+    envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+
+    osc.connect(envelope);
+    envelope.connect(audioCtx.destination);
+
+    osc.start(time);
+    osc.stop(time + 0.1);
+
+    // VISUAL LOGIC FOR QUICK-QUICK-SLOW
+    const delay = (time - audioCtx.currentTime) * 1000;
+    setTimeout(() => {
+        // We update the text to show the dance step
+        visualizer.innerText = steps[stepCounter];
+        
+        // Visual styling
+        if (steps[stepCounter].includes("QUICK")) {
+            visualizer.style.background = "#ff4757"; // Red for fast
+        } else {
+            visualizer.style.background = "#2ed573"; // Green for slow/hold
         }
 
-        function playBeat(beatNumber, time) {
-            const osc = audioCtx.createOscillator();
-            const envelope = audioCtx.createGain();
-
-            // High pitch for "1", lower for "2"
-            osc.frequency.value = (beatNumber === 1) ? 880 : 440;
-            
-            envelope.gain.exponentialRampToValueAtTime(1, time);
-            envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-
-            osc.connect(envelope);
-            envelope.connect(audioCtx.destination);
-
-            osc.start(time);
-            osc.stop(time + 0.1);
-
-            // Trigger Visuals exactly on the beat
-            const delay = (time - audioCtx.currentTime) * 1000;
-            setTimeout(() => {
-                visualizer.innerText = beatNumber;
-                visualizer.className = (beatNumber === 1) ? 'pulse-1' : 'pulse-2';
-                setTimeout(() => visualizer.className = '', 100);
-            }, delay);
-        }
-
-        startBtn.addEventListener('click', () => {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            if (isRunning) {
-                cancelAnimationFrame(timerID);
-                startBtn.innerText = "START METRONOME";
-            } else {
-                nextNoteTime = audioCtx.currentTime;
-                currentBeat = 1;
-                scheduler();
-                startBtn.innerText = "STOP METRONOME";
-            }
-            isRunning = !isRunning;
-        });
+        stepCounter = (stepCounter + 1) % steps.length;
+    }, delay);
+}
     </script>
 </body>
 </html>
