@@ -3,71 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forró Pro Trainer</title>
+    <title>Forró Master: Split Controls</title>
     <style>
-        :root { --accent: #ff4757; --bg: #0f0f0f; --card: #1e1e1e; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: white; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        :root { --accent: #ff4757; --green: #2ed573; --bg: #0f0f0f; --card: #1e1e1e; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: white; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         
-        .player-card { background: var(--card); width: 90%; max-width: 400px; padding: 30px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.6); text-align: center; }
+        .player-card { background: var(--card); width: 90%; max-width: 400px; padding: 25px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.6); text-align: center; }
         
-        /* Visualizer */
-        #visual { 
-            height: 140px; border-radius: 25px; margin-bottom: 25px;
+        /* Metronome Button/Display */
+        #metronome-btn { 
+            height: 160px; border-radius: 25px; margin-bottom: 20px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: #252525; transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid #333;
+            background: #252525; transition: 0.2s; border: 4px solid #333; cursor: pointer;
+            position: relative; overflow: hidden;
         }
-        .quick { background: var(--accent) !important; transform: scale(0.98); }
-        .slow { background: #2ed573 !important; transform: scale(1.05); box-shadow: 0 0 20px rgba(46, 213, 115, 0.3); }
+        #metronome-btn:hover { border-color: #555; }
+        #metronome-btn.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(255, 71, 87, 0.2); }
         
-        #step-text { font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; }
-        #foot-text { font-size: 0.9rem; opacity: 0.5; text-transform: uppercase; margin-top: 8px; }
+        .quick { background: var(--accent) !important; color: white; }
+        .slow { background: var(--green) !important; color: white; transform: scale(1.03); }
+        
+        #step-text { font-size: 2.5rem; font-weight: 900; pointer-events: none; }
+        #foot-text { font-size: 0.9rem; opacity: 0.6; text-transform: uppercase; pointer-events: none; }
+        .hint { font-size: 0.7rem; opacity: 0.3; margin-top: 10px; pointer-events: none; }
 
-        /* Track Info */
-        #song-title { font-size: 1.4rem; margin: 15px 0 5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        #bpm-display { font-size: 0.9rem; color: var(--accent); font-weight: bold; margin-bottom: 20px; }
+        /* BPM Section */
+        #bpm-display { font-size: 1.2rem; color: var(--accent); font-weight: bold; margin: 10px 0; }
+        input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
 
-        /* Control Bar */
-        .controls { display: flex; justify-content: space-between; align-items: center; margin: 25px 0; }
-        .btn { background: #2a2a2a; border: none; color: white; border-radius: 50%; width: 55px; height: 55px; cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
-        .btn-play { width: 80px; height: 80px; background: var(--accent); font-size: 2rem; box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3); }
+        /* Music Controls */
+        .music-bar { background: #151515; padding: 15px; border-radius: 20px; margin-top: 20px; border: 1px solid #333; }
+        #song-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 10px; color: #bbb; text-transform: capitalize; }
+        .controls { display: flex; justify-content: center; align-items: center; gap: 20px; }
+        .btn { background: #333; border: none; color: white; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .btn-play { background: #444; width: 55px; height: 55px; font-size: 1.2rem; }
         .btn:active { transform: scale(0.9); }
 
-        /* UI Elements */
-        input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
-        .status-tag { font-size: 0.7rem; background: #333; padding: 4px 12px; border-radius: 20px; opacity: 0.6; }
+        #tap-btn { width: 100%; padding: 10px; background: transparent; border: 1px solid #444; color: #666; border-radius: 10px; cursor: pointer; font-size: 0.7rem; margin-top: 15px; }
     </style>
 </head>
 <body>
 
     <div class="player-card">
-        <div id="visual">
-            <div id="step-text">WAITING</div>
-            <div id="foot-text">Load Playlist...</div>
+        <div id="metronome-btn" onclick="toggleMetronome()">
+            <div id="step-text">START</div>
+            <div id="foot-text">Tap to start guide</div>
+            <div class="hint">METRONOME ONLY</div>
         </div>
 
-        <div id="song-title">Fetching songs...</div>
-        <div id="bpm-display">Tempo: <span id="bpmVal">80</span> BPM</div>
-
+        <div id="bpm-display"><span id="bpmVal">80</span> BPM</div>
         <input type="range" id="bpmRange" min="50" max="150" value="80">
-
-        <div class="controls">
-            <button class="btn" id="prevBtn">⏮</button>
-            <button class="btn btn-play" id="playBtn">▶</button>
-            <button class="btn" id="nextBtn">⏭</button>
-        </div>
         
-        <div class="status-tag">Background Audio Active</div>
+        <button id="tap-btn" onclick="handleTap()">TAP BEAT TO SET BPM</button>
+
+        <div class="music-bar">
+            <div id="song-title">Loading songs...</div>
+            <div class="controls">
+                <button class="btn" onclick="changeTrack(-1)">⏮</button>
+                <button class="btn btn-play" id="musicPlayBtn" onclick="toggleMusic()">▶</button>
+                <button class="btn" onclick="changeTrack(1)">⏭</button>
+            </div>
+        </div>
     </div>
 
     <script>
         let playlist = [];
-        let currentTrackIdx = 0;
-        let isPlaying = false;
-        let audioCtx = null;
-        let nextNoteTime = 0.0;
-        let stepIdx = 0;
-        let timerID = null;
+        let currentIdx = 0;
+        let isMetronomeRunning = false;
+        let isMusicPlaying = false;
+        let audioCtx, nextNoteTime, timerID, stepIdx = 0;
+        let tapTimes = [];
         const music = new Audio();
 
         const steps = [
@@ -79,101 +84,108 @@
             { label: "SLOW",  foot: "RIGHT (Hold)", length: 1.0, type: 's' }
         ];
 
-        // Fetch the playlist from the JSON file
-        async function fetchPlaylist() {
+        async function init() {
             try {
-                const response = await fetch('playlist.json');
-                playlist = await response.json();
-                if (playlist.length > 0) loadTrack(0);
-            } catch (err) {
-                document.getElementById('song-title').innerText = "Error loading playlist.json";
-            }
+                const res = await fetch('playlist.json');
+                playlist = await res.json();
+                loadTrack(0);
+            } catch (e) { document.getElementById('song-title').innerText = "Missing playlist.json"; }
+        }
+
+        function cleanName(path) {
+            let name = path.split('/').pop().split('.')[0];
+            return name.replace(/[_-]/g, ' ');
         }
 
         function loadTrack(idx) {
-            currentTrackIdx = idx;
-            const track = playlist[currentTrackIdx];
-            music.src = track.file;
-            document.getElementById('song-title').innerText = track.title;
-            
+            currentIdx = idx;
+            music.src = playlist[currentIdx];
+            document.getElementById('song-title').innerText = cleanName(playlist[currentIdx]);
             if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({
-                    title: track.title,
-                    artist: 'Forró Training',
-                    album: 'Dance Practice'
-                });
+                navigator.mediaSession.metadata = new MediaMetadata({ title: cleanName(playlist[currentIdx]), artist: 'Forró Guide' });
             }
         }
 
         function playClick(time, type) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.frequency.value = (type === 'q') ? 900 : 450;
+            osc.frequency.value = (type === 'q') ? 800 : 400;
             gain.gain.setValueAtTime(0.06, time);
             gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-            osc.start(time);
-            osc.stop(time + 0.1);
+            osc.start(time); osc.stop(time + 0.1);
         }
 
         function scheduler() {
             while (nextNoteTime < audioCtx.currentTime + 0.1) {
                 const step = steps[stepIdx];
                 playClick(nextNoteTime, step.type);
-                
                 const delay = (nextNoteTime - audioCtx.currentTime) * 1000;
                 setTimeout(() => {
                     document.getElementById('step-text').innerText = step.label;
                     document.getElementById('foot-text').innerText = step.foot;
-                    document.getElementById('visual').className = (step.type === 'q') ? 'quick' : 'slow';
-                    setTimeout(() => document.getElementById('visual').className = '', 100);
+                    document.getElementById('metronome-btn').className = (step.type === 'q') ? 'active quick' : 'active slow';
+                    setTimeout(() => document.getElementById('metronome-btn').className = 'active', 100);
                 }, delay);
-
                 nextNoteTime += step.length * (60.0 / document.getElementById('bpmRange').value);
                 stepIdx = (stepIdx + 1) % steps.length;
             }
             timerID = requestAnimationFrame(scheduler);
         }
 
-        function togglePlay() {
+        function toggleMetronome() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            if (isPlaying) {
-                music.pause();
+            if (isMetronomeRunning) {
+                isMetronomeRunning = false;
                 cancelAnimationFrame(timerID);
-                document.getElementById('playBtn').innerText = "▶";
+                document.getElementById('metronome-btn').classList.remove('active');
+                document.getElementById('step-text').innerText = "START";
+                document.getElementById('foot-text').innerText = "Tap to start guide";
             } else {
                 audioCtx.resume();
-                music.play();
-                nextNoteTime = audioCtx.currentTime + 0.1;
+                isMetronomeRunning = true;
+                nextNoteTime = audioCtx.currentTime + 0.05;
                 stepIdx = 0;
                 scheduler();
-                document.getElementById('playBtn').innerText = "⏸";
             }
-            isPlaying = !isPlaying;
         }
 
-        // Controls
-        document.getElementById('playBtn').onclick = togglePlay;
-        document.getElementById('nextBtn').onclick = () => {
-            currentTrackIdx = (currentTrackIdx + 1) % playlist.length;
-            loadTrack(currentTrackIdx);
-            if (isPlaying) music.play();
-        };
-        document.getElementById('prevBtn').onclick = () => {
-            currentTrackIdx = (currentTrackIdx - 1 + playlist.length) % playlist.length;
-            loadTrack(currentTrackIdx);
-            if (isPlaying) music.play();
-        };
-        document.getElementById('bpmRange').oninput = (e) => {
-            document.getElementById('bpmVal').innerText = e.target.value;
-        };
+        function toggleMusic() {
+            if (isMusicPlaying) {
+                music.pause();
+                document.getElementById('musicPlayBtn').innerText = "▶";
+            } else {
+                music.play();
+                document.getElementById('musicPlayBtn').innerText = "⏸";
+            }
+            isMusicPlaying = !isMusicPlaying;
+        }
 
-        music.onended = () => document.getElementById('nextBtn').click();
+        function changeTrack(dir) {
+            currentIdx = (currentIdx + dir + playlist.length) % playlist.length;
+            loadTrack(currentIdx);
+            if (isMusicPlaying) music.play();
+        }
 
-        // Start by fetching the list
-        fetchPlaylist();
+        function handleTap() {
+            const now = Date.now();
+            tapTimes.push(now);
+            if (tapTimes.length > 4) tapTimes.shift();
+            if (tapTimes.length > 1) {
+                const diffs = [];
+                for (let i = 1; i < tapTimes.length; i++) diffs.push(tapTimes[i] - tapTimes[i-1]);
+                const bpm = Math.round(60000 / (diffs.reduce((a,b)=>a+b)/diffs.length));
+                if (bpm > 40 && bpm < 180) {
+                    document.getElementById('bpmRange').value = bpm;
+                    document.getElementById('bpmVal').innerText = bpm;
+                }
+            }
+        }
+
+        document.getElementById('bpmRange').oninput = (e) => document.getElementById('bpmVal').innerText = e.target.value;
+        music.onended = () => changeTrack(1);
+        init();
     </script>
 </body>
 </html>
