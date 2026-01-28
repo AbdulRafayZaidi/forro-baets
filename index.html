@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Forró Beat Master</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 50px; }
+        #visualizer {
+            width: 200px; height: 200px; border-radius: 50%;
+            background: #ddd; margin: 30px auto;
+            transition: transform 0.1s;
+        }
+        .pulse { background: #ff4757 !important; transform: scale(1.1); }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>🪗 Forró Beat Trainer</h1>
+    <p>Upload a track or start the metronome to practice your basic step (1-2-3...)</p>
+
+    <div id="visualizer"></div>
+    
+    <div class="controls">
+        <input type="number" id="bpm" value="80" style="width: 50px;"> BPM
+        <button onclick="toggleMetronome()">Start/Stop Metronome</button>
+    </div>
+
+    <script>
+        let isPlaying = false;
+        let interval;
+        const visualizer = document.getElementById('visualizer');
+        const bpmInput = document.getElementById('bpm');
+
+        function toggleMetronome() {
+            if (isPlaying) {
+                clearInterval(interval);
+                isPlaying = false;
+            } else {
+                const ms = 60000 / bpmInput.value;
+                isPlaying = true;
+                interval = setInterval(() => {
+                    visualPulse();
+                }, ms);
+            }
+        }
+
+        function visualPulse() {
+            visualizer.classList.add('pulse');
+            setTimeout(() => visualizer.classList.remove('pulse'), 100);
+        }
+    </script>
+</body>
+</html>
