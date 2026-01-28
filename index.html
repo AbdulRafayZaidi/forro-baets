@@ -2,64 +2,73 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Forró Step Master</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forró Pro Trainer</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
-        .box { background: #333; padding: 20px; border-radius: 20px; max-width: 400px; margin: auto; border: 2px solid #444; }
+        :root { --accent: #ff4757; --bg: #0f0f0f; --card: #1e1e1e; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: white; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
         
+        .player-card { background: var(--card); width: 90%; max-width: 400px; padding: 30px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.6); text-align: center; }
+        
+        /* Visualizer */
         #visual { 
-            height: 150px; border-radius: 15px; margin: 20px 0;
+            height: 140px; border-radius: 25px; margin-bottom: 25px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: #222; transition: 0.1s; border: 5px solid #444;
+            background: #252525; transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid #333;
         }
-        .quick { background: #ff4757 !important; transform: scale(1.02); border-color: white !important; }
-        .slow { background: #2ed573 !important; transform: scale(1.08); border-color: white !important; }
+        .quick { background: var(--accent) !important; transform: scale(0.98); }
+        .slow { background: #2ed573 !important; transform: scale(1.05); box-shadow: 0 0 20px rgba(46, 213, 115, 0.3); }
+        
+        #step-text { font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; }
+        #foot-text { font-size: 0.9rem; opacity: 0.5; text-transform: uppercase; margin-top: 8px; }
 
-        #step-text { font-size: 2rem; font-weight: bold; }
-        #foot-text { font-size: 1.2rem; margin-top: 10px; color: #aaa; }
+        /* Track Info */
+        #song-title { font-size: 1.4rem; margin: 15px 0 5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #bpm-display { font-size: 0.9rem; color: var(--accent); font-weight: bold; margin-bottom: 20px; }
 
-        button { 
-            width: 100%; padding: 20px; font-size: 1.2rem; font-weight: bold;
-            background: #007bff; color: white; border: none; border-radius: 10px; cursor: pointer;
-        }
-        button:active { background: #0056b3; }
-        .stop { background: #dc3545 !important; }
+        /* Control Bar */
+        .controls { display: flex; justify-content: space-between; align-items: center; margin: 25px 0; }
+        .btn { background: #2a2a2a; border: none; color: white; border-radius: 50%; width: 55px; height: 55px; cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
+        .btn-play { width: 80px; height: 80px; background: var(--accent); font-size: 2rem; box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3); }
+        .btn:active { transform: scale(0.9); }
 
-        .slider-wrap { margin: 20px 0; }
-        input[type="range"] { width: 100%; }
-        input[type="file"] { margin-top: 20px; color: #ccc; }
+        /* UI Elements */
+        input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+        .status-tag { font-size: 0.7rem; background: #333; padding: 4px 12px; border-radius: 20px; opacity: 0.6; }
     </style>
 </head>
 <body>
 
-    <div class="box">
-        <h2>🪗 Forró Beat Master</h2>
-        
+    <div class="player-card">
         <div id="visual">
-            <div id="step-text">READY</div>
-            <div id="foot-text">Click Start Below</div>
+            <div id="step-text">WAITING</div>
+            <div id="foot-text">Load Playlist...</div>
         </div>
 
-        <div class="slider-wrap">
-            <label>Tempo (BPM): <span id="bpmVal">80</span></label><br>
-            <input type="range" id="bpmRange" min="40" max="140" value="80">
-        </div>
+        <div id="song-title">Fetching songs...</div>
+        <div id="bpm-display">Tempo: <span id="bpmVal">80</span> BPM</div>
 
-        <button id="startBtn">START TRAINING</button>
+        <input type="range" id="bpmRange" min="50" max="150" value="80">
 
-        <div style="margin-top:20px; border-top: 1px solid #555; padding-top:20px;">
-            <p style="font-size:0.8rem;">Practice with your music:</p>
-            <input type="file" id="audioUpload" accept="audio/*"><br>
-            <audio id="audioPlayer" controls style="width:100%; margin-top:10px;"></audio>
+        <div class="controls">
+            <button class="btn" id="prevBtn">⏮</button>
+            <button class="btn btn-play" id="playBtn">▶</button>
+            <button class="btn" id="nextBtn">⏭</button>
         </div>
+        
+        <div class="status-tag">Background Audio Active</div>
     </div>
 
     <script>
+        let playlist = [];
+        let currentTrackIdx = 0;
+        let isPlaying = false;
         let audioCtx = null;
-        let isRunning = false;
         let nextNoteTime = 0.0;
         let stepIdx = 0;
         let timerID = null;
+        const music = new Audio();
 
         const steps = [
             { label: "QUICK", foot: "Left", length: 0.5, type: 'q' },
@@ -70,29 +79,38 @@
             { label: "SLOW",  foot: "RIGHT (Hold)", length: 1.0, type: 's' }
         ];
 
-        const startBtn = document.getElementById('startBtn');
-        const visual = document.getElementById('visual');
-        const stepText = document.getElementById('step-text');
-        const footText = document.getElementById('foot-text');
-        const bpmRange = document.getElementById('bpmRange');
-        const bpmVal = document.getElementById('bpmVal');
+        // Fetch the playlist from the JSON file
+        async function fetchPlaylist() {
+            try {
+                const response = await fetch('playlist.json');
+                playlist = await response.json();
+                if (playlist.length > 0) loadTrack(0);
+            } catch (err) {
+                document.getElementById('song-title').innerText = "Error loading playlist.json";
+            }
+        }
 
-        bpmRange.oninput = () => bpmVal.innerText = bpmRange.value;
-
-        // Handle Audio File
-        document.getElementById('audioUpload').onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) document.getElementById('audioPlayer').src = URL.createObjectURL(file);
-        };
+        function loadTrack(idx) {
+            currentTrackIdx = idx;
+            const track = playlist[currentTrackIdx];
+            music.src = track.file;
+            document.getElementById('song-title').innerText = track.title;
+            
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: track.title,
+                    artist: 'Forró Training',
+                    album: 'Dance Practice'
+                });
+            }
+        }
 
         function playClick(time, type) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-
-            osc.frequency.value = (type === 'q') ? 800 : 400;
-            gain.gain.setValueAtTime(0.1, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-
+            osc.frequency.value = (type === 'q') ? 900 : 450;
+            gain.gain.setValueAtTime(0.06, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start(time);
@@ -101,52 +119,61 @@
 
         function scheduler() {
             while (nextNoteTime < audioCtx.currentTime + 0.1) {
-                const currentStep = steps[stepIdx];
+                const step = steps[stepIdx];
+                playClick(nextNoteTime, step.type);
                 
-                // Sound
-                playClick(nextNoteTime, currentStep.type);
-
-                // Visuals
                 const delay = (nextNoteTime - audioCtx.currentTime) * 1000;
                 setTimeout(() => {
-                    stepText.innerText = currentStep.label;
-                    footText.innerText = currentStep.foot;
-                    visual.className = (currentStep.type === 'q') ? 'quick' : 'slow';
-                    setTimeout(() => visual.className = '', 100);
+                    document.getElementById('step-text').innerText = step.label;
+                    document.getElementById('foot-text').innerText = step.foot;
+                    document.getElementById('visual').className = (step.type === 'q') ? 'quick' : 'slow';
+                    setTimeout(() => document.getElementById('visual').className = '', 100);
                 }, delay);
 
-                // Timing logic
-                let secondsPerBeat = 60.0 / bpmRange.value;
-                nextNoteTime += currentStep.length * secondsPerBeat;
+                nextNoteTime += step.length * (60.0 / document.getElementById('bpmRange').value);
                 stepIdx = (stepIdx + 1) % steps.length;
             }
             timerID = requestAnimationFrame(scheduler);
         }
 
-        startBtn.addEventListener('click', () => {
-            // IMPORTANT: Initialize AudioContext on user click
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            if (isRunning) {
-                isRunning = false;
+        function togglePlay() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            if (isPlaying) {
+                music.pause();
                 cancelAnimationFrame(timerID);
-                startBtn.innerText = "START TRAINING";
-                startBtn.classList.remove('stop');
-                stepText.innerText = "PAUSED";
+                document.getElementById('playBtn').innerText = "▶";
             } else {
-                // Resume context in case browser suspended it
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                
-                isRunning = true;
-                nextNoteTime = audioCtx.currentTime + 0.05;
+                audioCtx.resume();
+                music.play();
+                nextNoteTime = audioCtx.currentTime + 0.1;
                 stepIdx = 0;
                 scheduler();
-                startBtn.innerText = "STOP";
-                startBtn.classList.add('stop');
+                document.getElementById('playBtn').innerText = "⏸";
             }
-        });
+            isPlaying = !isPlaying;
+        }
+
+        // Controls
+        document.getElementById('playBtn').onclick = togglePlay;
+        document.getElementById('nextBtn').onclick = () => {
+            currentTrackIdx = (currentTrackIdx + 1) % playlist.length;
+            loadTrack(currentTrackIdx);
+            if (isPlaying) music.play();
+        };
+        document.getElementById('prevBtn').onclick = () => {
+            currentTrackIdx = (currentTrackIdx - 1 + playlist.length) % playlist.length;
+            loadTrack(currentTrackIdx);
+            if (isPlaying) music.play();
+        };
+        document.getElementById('bpmRange').oninput = (e) => {
+            document.getElementById('bpmVal').innerText = e.target.value;
+        };
+
+        music.onended = () => document.getElementById('nextBtn').click();
+
+        // Start by fetching the list
+        fetchPlaylist();
     </script>
 </body>
 </html>
