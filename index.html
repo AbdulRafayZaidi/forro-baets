@@ -2,61 +2,151 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forró Step Master</title>
     <style>
-        :root { --q-color: #ff4757; --s-color: #2ed573; --bg: #2f3542; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .card { background: #3f4452; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; width: 350px; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
+        .box { background: #333; padding: 20px; border-radius: 20px; max-width: 400px; margin: auto; border: 2px solid #444; }
         
-        /* The Visualizer */
-        #display { 
-            width: 100%; height: 120px; border-radius: 10px; background: #2f3542;
+        #visual { 
+            height: 150px; border-radius: 15px; margin: 20px 0;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            margin: 20px 0; border: 4px solid #57606f; transition: all 0.1s;
+            background: #222; transition: 0.1s; border: 5px solid #444;
         }
-        #step-text { font-size: 1.8rem; font-weight: bold; text-transform: uppercase; }
-        #foot-text { font-size: 1rem; color: #ced6e0; margin-top: 5px; }
+        .quick { background: #ff4757 !important; transform: scale(1.02); border-color: white !important; }
+        .slow { background: #2ed573 !important; transform: scale(1.08); border-color: white !important; }
 
-        .pulse-q { background: var(--q-color) !important; border-color: white !important; transform: scale(1.02); }
-        .pulse-s { background: var(--s-color) !important; border-color: white !important; transform: scale(1.05); }
+        #step-text { font-size: 2rem; font-weight: bold; }
+        #foot-text { font-size: 1.2rem; margin-top: 10px; color: #aaa; }
 
-        button { background: #1e90ff; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1rem; }
-        .stop-mode { background: #ff4757; }
-        
-        input[type="range"] { width: 100%; margin: 15px 0; }
-        .upload-area { margin-top: 20px; border-top: 1px solid #57606f; padding-top: 20px; font-size: 0.9rem; }
-        audio { width: 100%; margin-top: 10px; }
+        button { 
+            width: 100%; padding: 20px; font-size: 1.2rem; font-weight: bold;
+            background: #007bff; color: white; border: none; border-radius: 10px; cursor: pointer;
+        }
+        button:active { background: #0056b3; }
+        .stop { background: #dc3545 !important; }
+
+        .slider-wrap { margin: 20px 0; }
+        input[type="range"] { width: 100%; }
+        input[type="file"] { margin-top: 20px; color: #ccc; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2 style="margin:0">🪗 Forró Step Master</h2>
-        <p style="font-size: 0.8rem; opacity: 0.7;">Quick-Quick-Slow Trainer</p>
+    <div class="box">
+        <h2>🪗 Forró Beat Master</h2>
         
-        <div id="display">
-            <div id="step-text">READY?</div>
-            <div id="foot-text">Press Start</div>
+        <div id="visual">
+            <div id="step-text">READY</div>
+            <div id="foot-text">Click Start Below</div>
         </div>
 
-        <label>BPM: <span id="bpmVal">80</span></label>
-        <input type="range" id="bpmRange" min="60" max="140" value="80">
+        <div class="slider-wrap">
+            <label>Tempo (BPM): <span id="bpmVal">80</span></label><br>
+            <input type="range" id="bpmRange" min="40" max="140" value="80">
+        </div>
 
-        <button id="startBtn">START PRACTICE</button>
+        <button id="startBtn">START TRAINING</button>
 
-        <div class="upload-area">
-            <label>Practice with your music:</label><br>
-            <input type="file" id="audioUpload" accept="audio/*">
-            <audio id="audioPlayer" controls></audio>
+        <div style="margin-top:20px; border-top: 1px solid #555; padding-top:20px;">
+            <p style="font-size:0.8rem;">Practice with your music:</p>
+            <input type="file" id="audioUpload" accept="audio/*"><br>
+            <audio id="audioPlayer" controls style="width:100%; margin-top:10px;"></audio>
         </div>
     </div>
 
     <script>
         let audioCtx = null;
         let isRunning = false;
-        let timerID = null;
         let nextNoteTime = 0.0;
         let stepIdx = 0;
+        let timerID = null;
 
-        // The Forró "Quick
+        const steps = [
+            { label: "QUICK", foot: "Left", length: 0.5, type: 'q' },
+            { label: "QUICK", foot: "Right", length: 0.5, type: 'q' },
+            { label: "SLOW",  foot: "LEFT (Hold)", length: 1.0, type: 's' },
+            { label: "QUICK", foot: "Right", length: 0.5, type: 'q' },
+            { label: "QUICK", foot: "Left", length: 0.5, type: 'q' },
+            { label: "SLOW",  foot: "RIGHT (Hold)", length: 1.0, type: 's' }
+        ];
+
+        const startBtn = document.getElementById('startBtn');
+        const visual = document.getElementById('visual');
+        const stepText = document.getElementById('step-text');
+        const footText = document.getElementById('foot-text');
+        const bpmRange = document.getElementById('bpmRange');
+        const bpmVal = document.getElementById('bpmVal');
+
+        bpmRange.oninput = () => bpmVal.innerText = bpmRange.value;
+
+        // Handle Audio File
+        document.getElementById('audioUpload').onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) document.getElementById('audioPlayer').src = URL.createObjectURL(file);
+        };
+
+        function playClick(time, type) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.frequency.value = (type === 'q') ? 800 : 400;
+            gain.gain.setValueAtTime(0.1, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + 0.1);
+        }
+
+        function scheduler() {
+            while (nextNoteTime < audioCtx.currentTime + 0.1) {
+                const currentStep = steps[stepIdx];
+                
+                // Sound
+                playClick(nextNoteTime, currentStep.type);
+
+                // Visuals
+                const delay = (nextNoteTime - audioCtx.currentTime) * 1000;
+                setTimeout(() => {
+                    stepText.innerText = currentStep.label;
+                    footText.innerText = currentStep.foot;
+                    visual.className = (currentStep.type === 'q') ? 'quick' : 'slow';
+                    setTimeout(() => visual.className = '', 100);
+                }, delay);
+
+                // Timing logic
+                let secondsPerBeat = 60.0 / bpmRange.value;
+                nextNoteTime += currentStep.length * secondsPerBeat;
+                stepIdx = (stepIdx + 1) % steps.length;
+            }
+            timerID = requestAnimationFrame(scheduler);
+        }
+
+        startBtn.addEventListener('click', () => {
+            // IMPORTANT: Initialize AudioContext on user click
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            if (isRunning) {
+                isRunning = false;
+                cancelAnimationFrame(timerID);
+                startBtn.innerText = "START TRAINING";
+                startBtn.classList.remove('stop');
+                stepText.innerText = "PAUSED";
+            } else {
+                // Resume context in case browser suspended it
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                isRunning = true;
+                nextNoteTime = audioCtx.currentTime + 0.05;
+                stepIdx = 0;
+                scheduler();
+                startBtn.innerText = "STOP";
+                startBtn.classList.add('stop');
+            }
+        });
+    </script>
+</body>
+</html>
