@@ -1,4 +1,5 @@
 [
-  { "title": "Asa Branca", "file": "songs/asa_branca.mp3" },
-  { "title": "Xote das Meninas", "file": "songs/xote.mp3" }
+  "songs/asa-branca.mp3",
+  "songs/xote-das-meninas.mp3",
+  "songs/baiao-destemperado.mp3"
 ]
