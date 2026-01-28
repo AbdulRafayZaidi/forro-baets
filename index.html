@@ -2,77 +2,117 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forró Beat Master</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 50px; }
-        #visualizer {
-            width: 200px; height: 200px; border-radius: 50%;
-            background: #ddd; margin: 30px auto;
-            transition: transform 0.1s;
-        }
-        .pulse { background: #ff4757 !important; transform: scale(1.1); }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        :root { --primary: #ff4757; --bg: #2f3542; --text: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: #3f4452; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; width: 320px; }
+        #visualizer { width: 120px; height: 120px; border-radius: 50%; border: 8px solid #57606f; margin: 20px auto; transition: all 0.1s ease-out; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 2rem; }
+        .pulse-1 { background: var(--primary); transform: scale(1.1); border-color: white; }
+        .pulse-2 { background: #ffa502; transform: scale(1.05); }
+        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 10px 0; width: 100%; transition: opacity 0.2s; }
+        button:active { opacity: 0.8; }
+        input[type="file"] { margin: 15px 0; font-size: 0.8rem; }
+        .controls { margin-top: 15px; border-top: 1px solid #57606f; pt: 15px; }
+        label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ced6e0; }
     </style>
 </head>
 <body>
 
-    <h1>🪗 Forró Beat Trainer</h1>
-    <p>Upload a track or start the metronome to practice your basic step (1-2-3...)</p>
+    <div class="card">
+        <h2>🪗 Forró Beat</h2>
+        
+        <div id="visualizer">1</div>
 
-    <div id="visualizer"></div>
-    
-    <div class="controls">
-        <input type="number" id="bpm" value="80" style="width: 50px;"> BPM
-        <button onclick="toggleMetronome()">Start/Stop Metronome</button>
+        <label>BPM: <span id="bpmValue">80</span></label>
+        <input type="range" id="bpmRange" min="60" max="160" value="80" style="width: 100%;">
+
+        <button id="startBtn">START METRONOME</button>
+
+        <div class="controls">
+            <label>Practice with your own music:</label>
+            <input type="file" id="audioUpload" accept="audio/*">
+            <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
+        </div>
     </div>
 
     <script>
-        // This is a simplified logic flow for your app
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const analyser = audioCtx.createAnalyser();
-const filter = audioCtx.createBiquadFilter();
+        let audioCtx = null;
+        let isRunning = false;
+        let currentBeat = 1;
+        let nextNoteTime = 0.0;
+        let timerID = null;
 
-// Filter out everything except the bass (below 150Hz)
-filter.type = "lowpass";
-filter.frequency.value = 150; 
-
-function detectBeat() {
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(dataArray);
-
-    // Calculate the "energy" of the bass
-    let lowerHalfArray = dataArray.slice(0, dataArray.length / 4);
-    let sum = lowerHalfArray.reduce((a, b) => a + b, 0);
-    let avg = sum / lowerHalfArray.length;
-
-    // If the bass energy jumps above a certain level, it's a beat!
-    if (avg > threshold) {
-        triggerVisualFlash(); 
-    }
-    requestAnimationFrame(detectBeat);
-}
-        let isPlaying = false;
-        let interval;
         const visualizer = document.getElementById('visualizer');
-        const bpmInput = document.getElementById('bpm');
+        const bpmRange = document.getElementById('bpmRange');
+        const bpmValue = document.getElementById('bpmValue');
+        const startBtn = document.getElementById('startBtn');
+        const audioUpload = document.getElementById('audioUpload');
+        const audioPlayer = document.getElementById('audioPlayer');
 
-        function toggleMetronome() {
-            if (isPlaying) {
-                clearInterval(interval);
-                isPlaying = false;
-            } else {
-                const ms = 60000 / bpmInput.value;
-                isPlaying = true;
-                interval = setInterval(() => {
-                    visualPulse();
-                }, ms);
+        // Update BPM display
+        bpmRange.addEventListener('input', () => {
+            bpmValue.innerText = bpmRange.value;
+        });
+
+        // Handle File Upload
+        audioUpload.addEventListener('change', function() {
+            const files = this.files;
+            if (files.length > 0) {
+                const url = URL.createObjectURL(files[0]);
+                audioPlayer.src = url;
             }
+        });
+
+        function scheduler() {
+            while (nextNoteTime < audioCtx.currentTime + 0.1) {
+                playBeat(currentBeat, nextNoteTime);
+                nextNoteTime += 60.0 / bpmRange.value;
+                currentBeat = (currentBeat === 1) ? 2 : 1; // Forró is 2/4 time
+            }
+            timerID = requestAnimationFrame(scheduler);
         }
 
-        function visualPulse() {
-            visualizer.classList.add('pulse');
-            setTimeout(() => visualizer.classList.remove('pulse'), 100);
+        function playBeat(beatNumber, time) {
+            const osc = audioCtx.createOscillator();
+            const envelope = audioCtx.createGain();
+
+            // High pitch for "1", lower for "2"
+            osc.frequency.value = (beatNumber === 1) ? 880 : 440;
+            
+            envelope.gain.exponentialRampToValueAtTime(1, time);
+            envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+
+            osc.connect(envelope);
+            envelope.connect(audioCtx.destination);
+
+            osc.start(time);
+            osc.stop(time + 0.1);
+
+            // Trigger Visuals exactly on the beat
+            const delay = (time - audioCtx.currentTime) * 1000;
+            setTimeout(() => {
+                visualizer.innerText = beatNumber;
+                visualizer.className = (beatNumber === 1) ? 'pulse-1' : 'pulse-2';
+                setTimeout(() => visualizer.className = '', 100);
+            }, delay);
         }
+
+        startBtn.addEventListener('click', () => {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            if (isRunning) {
+                cancelAnimationFrame(timerID);
+                startBtn.innerText = "START METRONOME";
+            } else {
+                nextNoteTime = audioCtx.currentTime;
+                currentBeat = 1;
+                scheduler();
+                startBtn.innerText = "STOP METRONOME";
+            }
+            isRunning = !isRunning;
+        });
     </script>
 </body>
 </html>
