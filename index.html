@@ -3,142 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forró Beat Master</title>
+    <title>Forró Step Master</title>
     <style>
-        :root { --primary: #ff4757; --bg: #2f3542; --text: #ffffff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { background: #3f4452; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; width: 320px; }
-        #visualizer { width: 120px; height: 120px; border-radius: 50%; border: 8px solid #57606f; margin: 20px auto; transition: all 0.1s ease-out; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 2rem; }
-        .pulse-1 { background: var(--primary); transform: scale(1.1); border-color: white; }
-        .pulse-2 { background: #ffa502; transform: scale(1.05); }
-        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 10px 0; width: 100%; transition: opacity 0.2s; }
-        button:active { opacity: 0.8; }
-        input[type="file"] { margin: 15px 0; font-size: 0.8rem; }
-        .controls { margin-top: 15px; border-top: 1px solid #57606f; pt: 15px; }
-        label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ced6e0; }
+        :root { --q-color: #ff4757; --s-color: #2ed573; --bg: #2f3542; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .card { background: #3f4452; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; width: 350px; }
+        
+        /* The Visualizer */
+        #display { 
+            width: 100%; height: 120px; border-radius: 10px; background: #2f3542;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            margin: 20px 0; border: 4px solid #57606f; transition: all 0.1s;
+        }
+        #step-text { font-size: 1.8rem; font-weight: bold; text-transform: uppercase; }
+        #foot-text { font-size: 1rem; color: #ced6e0; margin-top: 5px; }
+
+        .pulse-q { background: var(--q-color) !important; border-color: white !important; transform: scale(1.02); }
+        .pulse-s { background: var(--s-color) !important; border-color: white !important; transform: scale(1.05); }
+
+        button { background: #1e90ff; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1rem; }
+        .stop-mode { background: #ff4757; }
+        
+        input[type="range"] { width: 100%; margin: 15px 0; }
+        .upload-area { margin-top: 20px; border-top: 1px solid #57606f; padding-top: 20px; font-size: 0.9rem; }
+        audio { width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2>🪗 Forró Beat</h2>
+        <h2 style="margin:0">🪗 Forró Step Master</h2>
+        <p style="font-size: 0.8rem; opacity: 0.7;">Quick-Quick-Slow Trainer</p>
         
-        <div id="visualizer">1</div>
+        <div id="display">
+            <div id="step-text">READY?</div>
+            <div id="foot-text">Press Start</div>
+        </div>
 
-        <label>BPM: <span id="bpmValue">80</span></label>
-        <input type="range" id="bpmRange" min="60" max="160" value="80" style="width: 100%;">
+        <label>BPM: <span id="bpmVal">80</span></label>
+        <input type="range" id="bpmRange" min="60" max="140" value="80">
 
-        <button id="startBtn">START METRONOME</button>
+        <button id="startBtn">START PRACTICE</button>
 
-        <div class="controls">
-            <label>Practice with your own music:</label>
+        <div class="upload-area">
+            <label>Practice with your music:</label><br>
             <input type="file" id="audioUpload" accept="audio/*">
-            <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
+            <audio id="audioPlayer" controls></audio>
         </div>
     </div>
 
     <script>
-        // Add these variables at the top
-let stepCounter = 0;
-const steps = ["QUICK (Left)", "QUICK (Right)", "SLOW (Left / Hold)", 
-               "QUICK (Right)", "QUICK (Left)", "SLOW (Right / Hold)"];
-
-function playBeat(beatNumber, time) {
-    const osc = audioCtx.createOscillator();
-    const envelope = audioCtx.createGain();
-
-    osc.frequency.value = (beatNumber === 1) ? 880 : 440;
-    envelope.gain.exponentialRampToValueAtTime(1, time);
-    envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-
-    osc.connect(envelope);
-    envelope.connect(audioCtx.destination);
-
-    osc.start(time);
-    osc.stop(time + 0.1);
-
-    // VISUAL LOGIC FOR QUICK-QUICK-SLOW
-    const delay = (time - audioCtx.currentTime) * 1000;
-    setTimeout(() => {
-        // We update the text to show the dance step
-        visualizer.innerText = steps[stepCounter];
-        
-        // Visual styling
-        if (steps[stepCounter].includes("QUICK")) {
-            visualizer.style.background = "#ff4757"; // Red for fast
-        } else {
-            visualizer.style.background = "#2ed573"; // Green for slow/hold
-        }
-
-        stepCounter = (stepCounter + 1) % steps.length;
-    }, delay);
-}
         let audioCtx = null;
         let isRunning = false;
-        let currentBeat = 1;
-        let nextNoteTime = 0.0;
         let timerID = null;
+        let nextNoteTime = 0.0;
+        let stepIdx = 0;
 
-        const visualizer = document.getElementById('visualizer');
-        const bpmRange = document.getElementById('bpmRange');
-        const bpmValue = document.getElementById('bpmValue');
-        const startBtn = document.getElementById('startBtn');
-        const audioUpload = document.getElementById('audioUpload');
-        const audioPlayer = document.getElementById('audioPlayer');
-
-        // Update BPM display
-        bpmRange.addEventListener('input', () => {
-            bpmValue.innerText = bpmRange.value;
-        });
-
-        // Handle File Upload
-        audioUpload.addEventListener('change', function() {
-            const files = this.files;
-            if (files.length > 0) {
-                const url = URL.createObjectURL(files[0]);
-                audioPlayer.src = url;
-            }
-        });
-
-        function scheduler() {
-            while (nextNoteTime < audioCtx.currentTime + 0.1) {
-                playBeat(currentBeat, nextNoteTime);
-                nextNoteTime += 60.0 / bpmRange.value;
-      // Add these variables at the top
-let stepCounter = 0;
-const steps = ["QUICK (Left)", "QUICK (Right)", "SLOW (Left / Hold)", 
-               "QUICK (Right)", "QUICK (Left)", "SLOW (Right / Hold)"];
-
-function playBeat(beatNumber, time) {
-    const osc = audioCtx.createOscillator();
-    const envelope = audioCtx.createGain();
-
-    osc.frequency.value = (beatNumber === 1) ? 880 : 440;
-    envelope.gain.exponentialRampToValueAtTime(1, time);
-    envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-
-    osc.connect(envelope);
-    envelope.connect(audioCtx.destination);
-
-    osc.start(time);
-    osc.stop(time + 0.1);
-
-    // VISUAL LOGIC FOR QUICK-QUICK-SLOW
-    const delay = (time - audioCtx.currentTime) * 1000;
-    setTimeout(() => {
-        // We update the text to show the dance step
-        visualizer.innerText = steps[stepCounter];
-        
-        // Visual styling
-        if (steps[stepCounter].includes("QUICK")) {
-            visualizer.style.background = "#ff4757"; // Red for fast
-        } else {
-            visualizer.style.background = "#2ed573"; // Green for slow/hold
-        }
-
-        stepCounter = (stepCounter + 1) % steps.length;
-    }, delay);
-}
-    </script>
-</body>
-</html>
+        // The Forró "Quick
